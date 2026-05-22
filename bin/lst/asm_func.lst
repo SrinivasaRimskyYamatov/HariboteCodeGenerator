@@ -1,0 +1,440 @@
+GAS LISTING src/asm/asm_func.s 			page 1
+
+
+   1              	.arch i486
+   2              	
+   3              	.text
+   4              	
+   5              	.global io_hlt, io_cli, io_sti, io_stihlt
+   6              	.global io_in8, io_in16, io_in32
+   7              	.global io_out8, io_out16, io_out32
+   8              	.global io_load_eflags, io_store_eflags
+   9              	.global load_gdtr, load_idtr
+  10              	.global load_tr
+  11              	.global farjmp
+  12              	.global load_cr0, store_cr0
+  13              	.global asm_inthandler0c, asm_inthandler0d, asm_inthandler21, asm_inthandler2c, asm_inthandler27, a
+  14              	.global memtest_sub
+  15              	
+  16              	.global asm_hrb_api
+  17              	.global farcall
+  18              	.global start_app
+  19              	.global asm_end_app
+  20              	
+  21              	.extern inthandler0c, inthandler0d, inthandler21, inthandler2c, inthandler27, inthandler20
+  22              	.extern hrb_api
+  23              	
+  24              	#void io_htl(void)
+  25              	io_hlt:
+  26 0000 F4       	    hlt
+  27 0001 C3       	    ret
+  28              	
+  29              	#void io_cli(void)
+  30              	io_cli:
+  31 0002 FA       	    cli
+  32 0003 C3       	    ret
+  33              	
+  34              	#void io_sti(void)
+  35              	io_sti:
+  36 0004 FB       	    sti
+  37 0005 C3       	    ret
+  38              	
+  39              	#void io_stihlt(void)
+  40              	io_stihlt:
+  41 0006 FB       	    sti
+  42 0007 F4       	    hlt
+  43 0008 C3       	    ret
+  44              	
+  45              	#int io_in8(int port)
+  46              	io_in8:
+  47 0009 8B542404 	    movl 4(%esp), %edx
+  48 000d B8000000 	    movl $0, %eax
+  48      00
+  49 0012 EC       	    inb %dx, %al
+  50 0013 C3       	    ret
+  51              	
+  52              	#int io_in16(int port)
+  53              	io_in16:
+  54 0014 8B542404 	    movl 4(%esp), %edx
+  55 0018 B8000000 	    movl $0, %eax
+  55      00
+GAS LISTING src/asm/asm_func.s 			page 2
+
+
+  56 001d 66ED     	    inw %dx, %ax
+  57 001f C3       	    ret
+  58              	
+  59              	#int io_in32(int port)
+  60              	io_in32:
+  61 0020 8B542404 	    movl 4(%esp), %edx
+  62 0024 ED       	    inl %dx, %eax
+  63 0025 C3       	    ret
+  64              	
+  65              	#void io_out8(int port, int data)
+  66              	io_out8:
+  67 0026 8B542404 	    movl 4(%esp), %edx
+  68 002a 8A442408 	    movb 8(%esp), %al
+  69 002e EE       	    outb %al, %dx
+  70 002f C3       	    ret
+  71              	
+  72              	#void io_out16(int port, int data)
+  73              	io_out16:
+  74 0030 8B542404 	    movl 4(%esp), %edx
+  75 0034 8B442408 	    movl 8(%esp), %eax
+  76 0038 66EF     	    outw %ax, %dx
+  77 003a C3       	    ret
+  78              	
+  79              	#void io_out32(int port, int data)
+  80              	io_out32:
+  81 003b 8B542404 	    movl 4(%esp), %edx
+  82 003f 8B442408 	    movl 8(%esp), %eax
+  83 0043 EF       	    outl %eax, %dx
+  84 0044 C3       	    ret
+  85              	
+  86              	#int io_load_eflags(void)
+  87              	io_load_eflags:
+  88 0045 9C       	    pushf
+  89 0046 58       	    pop %eax
+  90 0047 C3       	    ret
+  91              	
+  92              	#int io_store_eflags(void)
+  93              	io_store_eflags:
+  94 0048 8B442404 	    movl 4(%esp), %eax
+  95 004c 50       	    push %eax
+  96 004d 9D       	    popf
+  97 004e C3       	    ret
+  98              	
+  99              	#void load_gdtr(int limit, int addr)
+ 100              	load_gdtr:
+ 101 004f 668B4424 	    movw 4(%esp), %ax #limit
+ 101      04
+ 102 0054 66894424 	    movw %ax, 6(%esp)
+ 102      06
+ 103 0059 0F015424 	    lgdt 6(%esp)
+ 103      06
+ 104 005e C3       	    ret
+ 105              	
+ 106              	#void load_idtr(int limit, int addr)
+ 107              	load_idtr:
+ 108 005f 668B4424 	    movw 4(%esp), %ax #limit
+ 108      04
+GAS LISTING src/asm/asm_func.s 			page 3
+
+
+ 109 0064 66894424 	    movw %ax, 6(%esp)
+ 109      06
+ 110 0069 0F015C24 	    lidt 6(%esp)
+ 110      06
+ 111 006e C3       	    ret
+ 112              	
+ 113              	#void load_tr(int tr)
+ 114              	load_tr:
+ 115 006f 0F005C24 	    ltr 4(%esp)
+ 115      04
+ 116 0074 C3       	    ret
+ 117              	
+ 118              	#void farjmp(int eip, int cs)
+ 119              	farjmp:
+ 120 0075 FF6C2404 	    ljmp *4(%esp)
+ 121 0079 C3       	    ret
+ 122              	
+ 123              	#int io_load_cr0(void)
+ 124              	load_cr0:
+ 125 007a 0F20C0   	    movl %cr0, %eax
+ 126 007d C3       	    ret
+ 127              	
+ 128              	#void io_store_cr0(int cr0)
+ 129              	store_cr0:
+ 130 007e 8B442404 	    movl 4(%esp), %eax
+ 131 0082 0F22C0   	    movl %eax, %cr0
+ 132 0085 C3       	    ret
+ 133              	
+ 134              	#void asm_inthandler0c(void)
+ 135              	asm_inthandler0c:
+ 136 0086 FB       	    sti
+ 137 0087 06       	    push %es
+ 138 0088 1E       	    push %ds
+ 139 0089 60       	    pusha
+ 140 008a 89E0     	    movl %esp, %eax
+ 141 008c 50       	    push %eax #espを記録しておく
+ 142 008d 668CD0   	    movw %ss, %ax #ds, esを揃える
+ 143 0090 8ED8     	    movw %ax, %ds
+ 144 0092 8EC0     	    movw %ax, %es
+ 145 0094 E8FCFFFF 	    call inthandler0c
+ 145      FF
+ 146 0099 83F800   	    cmpl $0, %eax
+ 147 009c 0F85EC00 	    jne asm_end_app
+ 147      0000
+ 148 00a2 58       	    pop %eax
+ 149 00a3 61       	    popa
+ 150 00a4 1F       	    pop %ds
+ 151 00a5 07       	    pop %es
+ 152 00a6 83C404   	    add $4, %esp #INT 0cではこれが必要
+ 153 00a9 CF       	    iret
+ 154              	
+ 155              	#void asm_inthandler0d(void)
+ 156              	asm_inthandler0d:
+ 157 00aa FB       	    sti
+ 158 00ab 06       	    push %es
+ 159 00ac 1E       	    push %ds
+ 160 00ad 60       	    pusha
+GAS LISTING src/asm/asm_func.s 			page 4
+
+
+ 161 00ae 89E0     	    movl %esp, %eax
+ 162 00b0 50       	    push %eax #espを記録しておく
+ 163 00b1 668CD0   	    movw %ss, %ax #ds, esを揃える
+ 164 00b4 8ED8     	    movw %ax, %ds
+ 165 00b6 8EC0     	    movw %ax, %es
+ 166 00b8 E8FCFFFF 	    call inthandler0d
+ 166      FF
+ 167 00bd 83F800   	    cmpl $0, %eax
+ 168 00c0 0F85C800 	    jne asm_end_app
+ 168      0000
+ 169 00c6 58       	    pop %eax
+ 170 00c7 61       	    popa
+ 171 00c8 1F       	    pop %ds
+ 172 00c9 07       	    pop %es
+ 173 00ca 83C404   	    add $4, %esp #INT 0dではこれが必要
+ 174 00cd CF       	    iret
+ 175              	
+ 176              	#void asm_inthandler21(void)
+ 177              	asm_inthandler21:
+ 178 00ce 06       	    push %es
+ 179 00cf 1E       	    push %ds
+ 180 00d0 60       	    pusha
+ 181 00d1 89E0     	    movl %esp, %eax
+ 182 00d3 50       	    push %eax
+ 183 00d4 668CD0   	    movw %ss, %ax
+ 184 00d7 8ED8     	    movw %ax, %ds
+ 185 00d9 8EC0     	    movw %ax, %es
+ 186 00db E8FCFFFF 	    call inthandler21
+ 186      FF
+ 187 00e0 58       	    pop %eax
+ 188 00e1 61       	    popa
+ 189 00e2 1F       	    pop %ds
+ 190 00e3 07       	    pop %es
+ 191 00e4 CF       	    iret
+ 192              	
+ 193              	#void asm_inthandler2c(void)
+ 194              	asm_inthandler2c:
+ 195 00e5 06       	    push %es
+ 196 00e6 1E       	    push %ds
+ 197 00e7 60       	    pusha
+ 198 00e8 89E0     	    mov %esp, %eax
+ 199 00ea 50       	    push %eax
+ 200 00eb 668CD0   	    movw %ss, %ax
+ 201 00ee 8ED8     	    movw %ax, %ds
+ 202 00f0 8EC0     	    movw %ax, %es
+ 203 00f2 E8FCFFFF 	    call inthandler2c
+ 203      FF
+ 204 00f7 58       	    pop %eax
+ 205 00f8 61       	    popa
+ 206 00f9 1F       	    pop %ds
+ 207 00fa 07       	    pop %es
+ 208 00fb CF       	    iret
+ 209              	
+ 210              	
+ 211              	#void asm_inthandler27(void)
+ 212              	asm_inthandler27:
+ 213 00fc 06       	    push %es
+GAS LISTING src/asm/asm_func.s 			page 5
+
+
+ 214 00fd 1E       	    push %ds
+ 215 00fe 60       	    pusha
+ 216 00ff 89E0     	    mov %esp, %eax
+ 217 0101 50       	    push %eax
+ 218 0102 668CD0   	    movw %ss, %ax
+ 219 0105 8ED8     	    movw %ax, %ds
+ 220 0107 8EC0     	    movw %ax, %es
+ 221 0109 E8FCFFFF 	    call inthandler27
+ 221      FF
+ 222 010e 58       	    pop %eax
+ 223 010f 61       	    popa
+ 224 0110 1F       	    pop %ds
+ 225 0111 07       	    pop %es
+ 226 0112 CF       	    iret
+ 227              	
+ 228              	
+ 229              	#void asm_inthandler20(void)
+ 230              	asm_inthandler20:
+ 231 0113 06       	    push %es
+ 232 0114 1E       	    push %ds
+ 233 0115 60       	    pusha
+ 234 0116 89E0     	    mov %esp, %eax
+ 235 0118 50       	    push %eax
+ 236 0119 668CD0   	    movw %ss, %ax
+ 237 011c 8ED8     	    movw %ax, %ds
+ 238 011e 8EC0     	    movw %ax, %es
+ 239 0120 E8FCFFFF 	    call inthandler20
+ 239      FF
+ 240 0125 58       	    pop %eax
+ 241 0126 61       	    popa
+ 242 0127 1F       	    pop %ds
+ 243 0128 07       	    pop %es
+ 244 0129 CF       	    iret
+ 245              	
+ 246              	#unsigned int memtest_sub(unsigned int start, unsigned int end)
+ 247              	memtest_sub:
+ 248 012a 57       	    push %edi #EDI, ESI, EBXも使う
+ 249 012b 56       	    push %esi
+ 250 012c 53       	    push %ebx
+ 251 012d BE55AA55 	    movl $0xaa55aa55, %esi # pat0 = 0xaa55aa55
+ 251      AA
+ 252 0132 BFAA55AA 	    movl $0x55aa55aa, %edi # pat1 = 0x55aa55aa
+ 252      55
+ 253 0137 8B442410 	    movl 12+4(%esp), %eax  # i = start
+ 254              	mts_loop:
+ 255 013b 89C3     	    movl %eax, %ebx
+ 256 013d 81C3FC0F 	    addl $0xffc, %ebx # p = i + 0xffc  //下位4byteをチェックする
+ 256      0000
+ 257 0143 8B13     	    movl (%ebx), %edx # old = *p
+ 258 0145 8933     	    movl %esi, (%ebx) # *p = pat0
+ 259 0147 8333FF   	    xorl $0xffffffff, (%ebx) # *p ^= 0xffffffff
+ 260 014a 3B3B     	    cmpl (%ebx), %edi # if(*p == pat1) goto mts_fin
+ 261 014c 7518     	    jne mts_fin
+ 262 014e 8333FF   	    xorl  $0xffffffff, (%ebx) # *p ^= 0xfffffff
+ 263 0151 3B33     	    cmpl (%ebx), %esi # if(*p == pat1) goto mts_fin
+ 264 0153 7511     	    jne mts_fin
+ 265 0155 8913     	    movl %edx, (%ebx)
+GAS LISTING src/asm/asm_func.s 			page 6
+
+
+ 266 0157 05001000 	    addl $0x1000, %eax # i += 0x1000 (4KB進める)
+ 266      00
+ 267 015c 3B442414 	    cmpl 12+8(%esp), %eax # if (i <= end) goto mts_loop
+ 268 0160 76D9     	    jbe mts_loop
+ 269 0162 5B       	    pop %ebx
+ 270 0163 5E       	    pop %esi
+ 271 0164 5F       	    pop %edi
+ 272 0165 C3       	    ret
+ 273              	mts_fin:
+ 274 0166 8913     	    movl %edx, (%ebx) #*p = old
+ 275 0168 5B       	    pop %ebx
+ 276 0169 5E       	    pop %esi
+ 277 016a 5F       	    pop %edi
+ 278 016b C3       	    ret
+ 279              	
+ 280              	#void farcall(int eip, int cs);
+ 281              	farcall:
+ 282 016c FF5C2404 	    lcall *4(%esp)
+ 283 0170 C3       	    ret
+ 284              	
+ 285              	#void hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
+ 286              	asm_hrb_api:
+ 287 0171 FB       	    sti
+ 288 0172 1E       	    push %ds
+ 289 0173 06       	    push %es
+ 290 0174 60       	    pusha #保存
+ 291 0175 60       	    pusha #hrb_apiに渡す用
+ 292 0176 668CD0   	    mov %ss, %ax #dsとesも揃える（必要？）
+ 293 0179 8ED8     	    mov %ax, %ds
+ 294 017b 8EC0     	    mov %ax, %es
+ 295 017d E8FCFFFF 	    call hrb_api
+ 295      FF
+ 296 0182 83F800   	    cmpl $0, %eax #戻り値チェック
+ 297 0185 7507     	    jne asm_end_app #0じゃなかったら終了する
+ 298 0187 83C420   	    addl $32, %esp #pusha積んだ分を戻す
+ 299 018a 61       	    popa #保存しておいたものを戻す
+ 300 018b 07       	    pop %es
+ 301 018c 1F       	    pop %ds
+ 302 018d CF       	    iret
+ 303              	
+ 304              	asm_end_app:
+ 305              	    #eaxはtss.esp0の番地
+ 306 018e 8B20     	    movl (%eax), %esp
+ 307 0190 C7400400 	    movl $0, 4(%eax)
+ 307      000000
+ 308 0197 61       	    popa
+ 309 0198 C3       	    ret #cmd_appに戻る
+ 310              	
+ 311              	#void start_app(int eip, int cs, int esp, int ds, int *tss_esp0)
+ 312              	start_app:
+ 313 0199 60       	    pusha #レジスタ保存
+ 314              	    
+ 315              	    # pushaでレジスタ8個が積まれる
+ 316              	    # 8 * 4 = 32 byte分デクリメントされている
+ 317              	    # 一番左の引数(eip)は 32 + 4 = 36(%esp)にある
+ 318 019a 8B442424 	    movl 36(%esp), %eax #アプリのEIP
+ 319 019e 8B4C2428 	    movl 40(%esp), %ecx #アプリのCS
+GAS LISTING src/asm/asm_func.s 			page 7
+
+
+ 320 01a2 8B54242C 	    movl 44(%esp), %edx #アプリのESP
+ 321 01a6 8B5C2430 	    movl 48(%esp), %ebx #アプリのDS/SS
+ 322 01aa 8B6C2434 	    movl 52(%esp), %ebp #tss.esp0の番地
+ 323 01ae 896500   	    movl %esp, (%ebp) #OSのESPを保存(OSのtss.esp0に保存している)
+ 324 01b1 8C5504   	    movw %ss, 4(%ebp) #OS用のSSを保存(tss.ss0に保存している)
+ 325              	    
+ 326 01b4 8EC3     	    movw %bx, %es
+ 327 01b6 8EDB     	    movw %bx, %ds
+ 328 01b8 8EE3     	    movw %bx, %fs
+ 329 01ba 8EEB     	    movw %bx, %gs
+ 330              	    
+ 331              	    #retfでアプリに飛ぶためにスタック調整
+ 332              	    #x86ではOSがアプリにcall/jmpしてはいけないことになっているらしい
+ 333              	    #なので、アプリの番地をpushしておいてlretで飛ぶ(P438)
+ 334 01bc 83C903   	    orl $3, %ecx #CS アプリのセグメント番号にorする（こういうものらしい？R
+ 335 01bf 83CB03   	    orl $3, %ebx #DS/SS アプリのセグメント番号にorする
+ 336              	    
+ 337              	    #以下をpushするのは特権レベルが違うセグメント間ではこうする必要が
+ 338              	    #lretは以下のような動作をする命令らしいので、ecx(アプリのcsを記録し
+ 339              	    #pop %eip
+ 340              	    #pop %cs
+ 341              	    #jmp %cs:(%eip)
+ 342              	    #また、特権レベルが違うセグメント間でのジャンプでは、espとssも必�
+ 343              	    #参考 : http://bttb.s1.valueserver.jp/wordpress/blog/2018/02/26/makeos-22/
+ 344              	    
+ 345 01c2 53       	    push %ebx #アプリのss
+ 346 01c3 52       	    push %edx #アプリのesp
+ 347 01c4 51       	    push %ecx #アプリのcs
+ 348 01c5 50       	    push %eax #アプリのeip
+ 349              	    
+ 350 01c6 CB       	    lret
+ 351              	
+ 352              	
+GAS LISTING src/asm/asm_func.s 			page 8
+
+
+DEFINED SYMBOLS
+  src/asm/asm_func.s:25     .text:00000000 io_hlt
+  src/asm/asm_func.s:30     .text:00000002 io_cli
+  src/asm/asm_func.s:35     .text:00000004 io_sti
+  src/asm/asm_func.s:40     .text:00000006 io_stihlt
+  src/asm/asm_func.s:46     .text:00000009 io_in8
+  src/asm/asm_func.s:53     .text:00000014 io_in16
+  src/asm/asm_func.s:60     .text:00000020 io_in32
+  src/asm/asm_func.s:66     .text:00000026 io_out8
+  src/asm/asm_func.s:73     .text:00000030 io_out16
+  src/asm/asm_func.s:80     .text:0000003b io_out32
+  src/asm/asm_func.s:87     .text:00000045 io_load_eflags
+  src/asm/asm_func.s:93     .text:00000048 io_store_eflags
+  src/asm/asm_func.s:100    .text:0000004f load_gdtr
+  src/asm/asm_func.s:107    .text:0000005f load_idtr
+  src/asm/asm_func.s:114    .text:0000006f load_tr
+  src/asm/asm_func.s:119    .text:00000075 farjmp
+  src/asm/asm_func.s:124    .text:0000007a load_cr0
+  src/asm/asm_func.s:129    .text:0000007e store_cr0
+  src/asm/asm_func.s:135    .text:00000086 asm_inthandler0c
+  src/asm/asm_func.s:156    .text:000000aa asm_inthandler0d
+  src/asm/asm_func.s:177    .text:000000ce asm_inthandler21
+  src/asm/asm_func.s:194    .text:000000e5 asm_inthandler2c
+  src/asm/asm_func.s:212    .text:000000fc asm_inthandler27
+  src/asm/asm_func.s:230    .text:00000113 asm_inthandler20
+  src/asm/asm_func.s:247    .text:0000012a memtest_sub
+  src/asm/asm_func.s:286    .text:00000171 asm_hrb_api
+  src/asm/asm_func.s:281    .text:0000016c farcall
+  src/asm/asm_func.s:312    .text:00000199 start_app
+  src/asm/asm_func.s:304    .text:0000018e asm_end_app
+  src/asm/asm_func.s:254    .text:0000013b mts_loop
+  src/asm/asm_func.s:273    .text:00000166 mts_fin
+
+UNDEFINED SYMBOLS
+inthandler0c
+inthandler0d
+inthandler21
+inthandler2c
+inthandler27
+inthandler20
+hrb_api
