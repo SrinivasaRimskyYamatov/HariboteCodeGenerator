@@ -9,7 +9,7 @@ HariboteCodeGenerator/wplace
 に置きます(C言語)
 
 そして
-```
+```java
 java -jar Make.jar ProgramName.c
 ```
 でコンパイルされます。
